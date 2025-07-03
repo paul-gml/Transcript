@@ -1,11 +1,12 @@
 import os
 import tempfile
 from flask import Flask, render_template, request, jsonify, send_file
-import whisper
+import openai
+
+# Charge la clé API OpenAI depuis la variable d'environnement
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = Flask(__name__)
-
-model = whisper.load_model("medium")
 transcriptions = {}
 
 @app.route("/", methods=["GET"])
@@ -23,30 +24,20 @@ def transcribe():
     temp_path = os.path.join(temp_dir, next(tempfile._get_candidate_names()) + suffix)
 
     try:
-        # Écris le fichier dans temp_path et ferme-le !
+        # Sauvegarder le fichier uploadé
         audio.save(temp_path)
-        # Vérifie l'existence réelle
-        print("Chemin du fichier envoyé à Whisper :", temp_path)
-        print("Fichier existe ?", os.path.exists(temp_path))
-        print("Contenu du dossier temporaire :", os.listdir(os.path.dirname(temp_path)))
-
-        # TEST ffmpeg depuis python
-        import subprocess
-        print("PATH système vu par Python :", os.environ.get("PATH"))
-        print("Test appel direct ffmpeg depuis Python...")
-        try:
-            result = subprocess.run(["ffmpeg", "-version"], capture_output=True, text=True)
-            print("FFmpeg trouvé :", result.stdout.splitlines()[0] if result.stdout else result.stderr)
-        except Exception as e:
-            print("Erreur appel ffmpeg :", e)
-
         if not os.path.exists(temp_path):
             return jsonify({"error": "Le fichier n'a pas été correctement enregistré sur le serveur."}), 500
 
-        # Transcription avec Whisper
-        print("Transcription du fichier :", temp_path)
-        result = model.transcribe(temp_path)
-        text = result["text"].strip()
+        # Transcription via API OpenAI
+        with open(temp_path, "rb") as f:
+            response = openai.audio.transcriptions.create(
+                model="whisper-1",
+                file=f,
+                response_format="text",
+                # language="fr",  # Optionnel : détecte automatique si non précisé
+            )
+        text = response.strip()
         key = os.path.basename(temp_path)
         transcriptions[key] = text
         return jsonify({"text": text, "key": key})
@@ -73,4 +64,5 @@ def download_txt(key):
     return send_file(temp_name, as_attachment=True, download_name="transcription.txt")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000, debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)

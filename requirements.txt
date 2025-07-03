@@ -1,4 +1,4 @@
 flask
-openai-whisper
-torch
+openai
 gunicorn
+python-dotenv  # facultatif si tu veux utiliser un .env en local
