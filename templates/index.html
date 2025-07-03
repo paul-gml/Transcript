@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Transcription Audio avec Whisper</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="card">
+    <h1>🎧 Transcription Audio <span style="font-size:1.1rem;font-weight:400;">(Whisper)</span></h1>
+    <form id="form" enctype="multipart/form-data">
+      <label for="file-upload" id="drop-area">
+        <span id="drop-label">Clique ou glisse ton fichier audio/vidéo ici</span>
+        <input id="file-upload" name="audio" type="file" accept="audio/*,video/*" required>
+      </label>
+      <div id="file-info" style="margin:0.8em 0;color:#5b21b6;font-weight:500;"></div>
+      <button type="submit" id="submit-btn">Transcrire</button>
+    </form>
+    <div id="loader" style="display:none;">⏳ Transcription en cours…</div>
+    <div id="result" style="display:none;">
+      <div class="transcription" id="transcription-text"></div>
+      <a id="download-link" href="#" style="display:none;margin-top:1rem;">⬇️ Télécharger la transcription (.txt)</a>
+    </div>
+    <div style="margin-top:2em;color:#6b7280;font-size:0.97em;">
+      Astuce : pour transcrire un enregistrement Dictaphone (iPhone), partagez-le d'abord dans Fichiers, puis sélectionnez-le ici.
+    </div>
+  </div>
+  <script>
+    const dropArea = document.getElementById("drop-area");
+    const fileInput = document.getElementById("file-upload");
+    const fileInfo = document.getElementById("file-info");
+    const form = document.getElementById("form");
+    const loader = document.getElementById("loader");
+    const result = document.getElementById("result");
+    const transcriptionText = document.getElementById("transcription-text");
+    const downloadLink = document.getElementById("download-link");
+    let downloadKey = null;
+
+    // Drag & drop
+    ["dragenter", "dragover"].forEach(evt =>
+      dropArea.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation();
+        dropArea.classList.add("dragover");
+        document.getElementById("drop-label").textContent = "Dépose ici !";
+      })
+    );
+    ["dragleave", "drop"].forEach(evt =>
+      dropArea.addEventListener(evt, e => {
+        e.preventDefault(); e.stopPropagation();
+        dropArea.classList.remove("dragover");
+        document.getElementById("drop-label").textContent = "Clique ou glisse ton fichier audio/vidéo ici";
+      })
+    );
+    dropArea.addEventListener("drop", e => {
+      if(e.dataTransfer.files.length) {
+        fileInput.files = e.dataTransfer.files;
+        // Affiche le nom du fichier déposé
+        showFileInfo();
+      }
+    });
+
+    // Affichage du nom de fichier dès sélection
+    fileInput.addEventListener("change", showFileInfo);
+
+    function showFileInfo() {
+      if (fileInput.files.length) {
+        const file = fileInput.files[0];
+        const size = Math.round(file.size / 1024);
+        fileInfo.innerHTML = `✅ <strong>${file.name}</strong> (${size} Ko) prêt à être transcrit.`;
+      } else {
+        fileInfo.textContent = "";
+      }
+    }
+
+    // Form submit
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      if (!fileInput.files.length) return;
+      loader.style.display = "block";
+      result.style.display = "none";
+      downloadLink.style.display = "none";
+      transcriptionText.textContent = "";
+      const formData = new FormData();
+      formData.append("audio", fileInput.files[0]);
+
+      try {
+        const resp = await fetch("/transcribe", {method:"POST", body: formData});
+        const data = await resp.json();
+        if (data.error) throw data.error;
+        loader.style.display = "none";
+        transcriptionText.textContent = data.text;
+        downloadKey = data.key;
+        downloadLink.href = `/download/${downloadKey}`;
+        downloadLink.style.display = "inline-block";
+        result.style.display = "block";
+      } catch(err) {
+        loader.style.display = "none";
+        transcriptionText.textContent = "❌ Erreur : " + (err || "inconnue");
+        result.style.display = "block";
+      }
+    });
+  </script>
+</body>
+</html>
