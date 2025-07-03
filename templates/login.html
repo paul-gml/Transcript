@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Connexion - Transcription Audio</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+      .login-box { background: #fff; border-radius:2em; box-shadow:0 0 24px #a78bfa44; max-width:400px; margin:5em auto; padding:2em 2.5em; text-align:center; }
+      input[type="password"] { padding:0.7em 1em; border-radius:1em; border:1px solid #c7d2fe; margin-bottom:1em; width: 100%; font-size:1.1em; }
+      button { background:#6366f1; color:#fff; border:0; border-radius:1em; padding:0.7em 2em; font-size:1.1em; font-weight:600; margin-top:0.5em; cursor:pointer; }
+      .error { color:#d946ef; font-weight:600; margin-bottom:1em;}
+    </style>
+</head>
+<body>
+  <div class="login-box">
+    <h1 style="margin-bottom:1em;">🔒 Accès protégé</h1>
+    {% if error %}
+      <div class="error">{{ error }}</div>
+    {% endif %}
+    <form method="POST">
+      <input type="password" name="password" placeholder="Mot de passe" required autofocus>
+      <br>
+      <button type="submit">Se connecter</button>
+    </form>
+  </div>
+</body>
+</html>
